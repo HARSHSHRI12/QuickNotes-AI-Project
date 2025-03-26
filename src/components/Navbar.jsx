@@ -105,13 +105,7 @@ const Navbar = () => {
               </Link>
             </motion.div>
           </li>
-          <li className="nav-item">
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Link to="/signup" className="nav-link-btn">
-                Sign Up <i className="fas fa-arrow-right"></i>
-              </Link>
-            </motion.div>
-          </li>
+          
         </ul>
       </div>
     </motion.nav>

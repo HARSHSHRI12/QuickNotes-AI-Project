@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import axios from 'axios'
 import './Contact.css'
 
 const Contact = () => {
@@ -10,34 +11,43 @@ const Contact = () => {
     message: ''
   })
   
-  const [formSubmitted, setFormSubmitted] = useState(false)
-  
+  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(''); // Add error message state
+
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prevState => ({
+    const { name, value } = e.target;
+    setFormData((prevState) => ({
       ...prevState,
-      [name]: value
-    }))
-  }
-  
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    // Here you would typically send the form data to a server
-    console.log('Form submitted:', formData)
-    setFormSubmitted(true)
-    
-    // Reset form after submission
-    setTimeout(() => {
-      setFormData({
-        name: '',
-        email: '',
-        subject: '',
-        message: ''
-      })
-      setFormSubmitted(false)
-    }, 3000)
-  }
-  
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      const response = await axios.post('http://localhost:3500/api/contact', formData);
+      if (response.status === 200) {
+        console.log('Form submitted:', formData);
+        setFormSubmitted(true);
+        setErrorMessage(''); // Clear any previous error message
+
+        // Reset form after 3 seconds
+        setTimeout(() => {
+          setFormData({
+            name: '',
+            email: '',
+            subject: '',
+            message: '',
+          });
+          setFormSubmitted(false);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setErrorMessage('Failed to send the message. Please try again later.');
+    }
+  };
   return (
     <div className="contact-page page-container">
       <div className="container">
@@ -71,7 +81,7 @@ const Contact = () => {
                   </div>
                   <div className="contact-details">
                     <h3>Our Location</h3>
-                    <p>123 Innovation Street, Tech City, TC 12345</p>
+                    <p>Avviare Education Hub,Noida 62</p>
                   </div>
                 </motion.div>
                 
@@ -86,7 +96,7 @@ const Contact = () => {
                   </div>
                   <div className="contact-details">
                     <h3>Phone Number</h3>
-                    <p>+1 (555) 123-4567</p>
+                    <p>+917706961435</p>
                   </div>
                 </motion.div>
                 
@@ -101,7 +111,7 @@ const Contact = () => {
                   </div>
                   <div className="contact-details">
                     <h3>Email Address</h3>
-                    <p>info@quicknotesai.com</p>
+                    <p>techwithharsh1301@gmail.com</p>
                   </div>
                 </motion.div>
                 
@@ -130,7 +140,7 @@ const Contact = () => {
                 <h3>Follow Us</h3>
                 <div className="social-icons">
                   <motion.a 
-                    href="#" 
+                    href="https://www.facebook.com/harsh.shrivastava.7587" 
                     whileHover={{ y: -5, scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                   >
@@ -144,14 +154,14 @@ const Contact = () => {
                     <i className="fab fa-twitter"></i>
                   </motion.a>
                   <motion.a 
-                    href="#" 
+                    href="https://www.instagram.com/tech_withharsh20/" 
                     whileHover={{ y: -5, scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                   >
                     <i className="fab fa-instagram"></i>
                   </motion.a>
                   <motion.a 
-                    href="#" 
+                    href="https://www.linkedin.com/in/harsh-shrivastava-737229299/" 
                     whileHover={{ y: -5, scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                   >

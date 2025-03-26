@@ -280,30 +280,30 @@ const ECoin = () => {
               <div className="leaderboard-user second">
                 <div className="leaderboard-rank">2</div>
                 <div className="leaderboard-avatar">
-                  <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="User" />
+                  <img src="harsh.jpg" alt="User" />
                 </div>
                 <div className="leaderboard-info">
-                  <h3>Michael Chen</h3>
+                  <h3>Harsh Shrivastava</h3>
                   <p><i className="fas fa-coins"></i> 2,450 E-Coins</p>
                 </div>
               </div>
               <div className="leaderboard-user first">
                 <div className="leaderboard-rank">1</div>
                 <div className="leaderboard-avatar">
-                  <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="User" />
+                  <img src="harsh.jpg" alt="User" />
                 </div>
                 <div className="leaderboard-info">
-                  <h3>Jessica Williams</h3>
+                  <h3>Harsh Shrivastava</h3>
                   <p><i className="fas fa-coins"></i> 3,120 E-Coins</p>
                 </div>
               </div>
               <div className="leaderboard-user third">
                 <div className="leaderboard-rank">3</div>
                 <div className="leaderboard-avatar">
-                  <img src="https://randomuser.me/api/portraits/men/67.jpg" alt="User" />
+                  <img src="harsh.jpg" alt="User" />
                 </div>
                 <div className="leaderboard-info">
-                  <h3>Robert Johnson</h3>
+                  <h3>Harsh Shrivastava</h3>
                   <p><i className="fas fa-coins"></i> 1,985 E-Coins</p>
                 </div>
               </div>
@@ -318,8 +318,8 @@ const ECoin = () => {
               <div className="leaderboard-row">
                 <div className="leaderboard-col rank">4</div>
                 <div className="leaderboard-col user">
-                  <img src="https://randomuser.me/api/portraits/women/22.jpg" alt="User" />
-                  <span>Emma Thompson</span>
+                  <img src="harsh.jpg" alt="User" />
+                  <span>Harsh Shrivastava</span>
                 </div>
                 <div className="leaderboard-col coins">1,756</div>
                 <div className="leaderboard-col level">Gold</div>
@@ -327,8 +327,8 @@ const ECoin = () => {
               <div className="leaderboard-row">
                 <div className="leaderboard-col rank">5</div>
                 <div className="leaderboard-col user">
-                  <img src="https://randomuser.me/api/portraits/men/54.jpg" alt="User" />
-                  <span>Daniel Brown</span>
+                  <img src="harsh.jpg" alt="User" />
+                  <span>Harsh Shrivastava</span>
                 </div>
                 <div className="leaderboard-col coins">1,645</div>
                 <div className="leaderboard-col level">Gold</div>
@@ -336,8 +336,8 @@ const ECoin = () => {
               <div className="leaderboard-row">
                 <div className="leaderboard-col rank">6</div>
                 <div className="leaderboard-col user">
-                  <img src="https://randomuser.me/api/portraits/women/56.jpg" alt="User" />
-                  <span>Olivia Martinez</span>
+                  <img src="harsh.jpg" alt="User" />
+                  <span>Harsh Shrivastava</span>
                 </div>
                 <div className="leaderboard-col coins">1,532</div>
                 <div className="leaderboard-col level">Silver</div>
@@ -345,8 +345,8 @@ const ECoin = () => {
               <div className="leaderboard-row">
                 <div className="leaderboard-col rank">7</div>
                 <div className="leaderboard-col user">
-                  <img src="https://randomuser.me/api/portraits/men/22.jpg" alt="User" />
-                  <span>William Davis</span>
+                  <img src="harsh.jpg" alt="User" />
+                  <span>Harsh Shrivastava</span>
                 </div>
                 <div className="leaderboard-col coins">1,487</div>
                 <div className="leaderboard-col level">Silver</div>

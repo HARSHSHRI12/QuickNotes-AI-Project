@@ -57,6 +57,9 @@ const AiAssistant = () => {
   // Initialize speech recognition with better error handling
   useEffect(() => {
     const initSpeechRecognition = () => {
+      if (!('webkitSpeechRecognition' in window)) {
+        addMessage('assistant', 'Your browser does not support voice input');
+      }
       try {
         if ('webkitSpeechRecognition' in window) {
           recognitionRef.current = new window.webkitSpeechRecognition();
@@ -119,6 +122,8 @@ const AiAssistant = () => {
 
     return () => clearTimeout(scrollTimer);
   }, [chatHistory, generatedImages]);
+
+ 
 
   // Focus input when form is submitted
   useEffect(() => {
@@ -420,11 +425,12 @@ Format requirements:
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-      const response = await fetch('http://localhost:3500/generate', {
+      const response = await fetch('http://localhost:3501/generate', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'Access-Control-Allow-Origin': '*' 
         },
         body: JSON.stringify({ 
           prompt,
@@ -475,9 +481,7 @@ Format requirements:
       const pdfDoc = await PDFDocument.create();
       let page = pdfDoc.addPage([595, 842]);
       const { width, height } = page.getSize();
-      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-      const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-      
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica).catch(() => pdfDoc.embedFont(StandardFonts.TimesRoman));
       let y = height - 50;
       page.drawText(`${userDetails.subject} Notes`, {
         x: 50,
@@ -502,7 +506,7 @@ Format requirements:
         for (const img of generatedImages) {
           try {
             const response = await fetch(img.url);
-            if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
+            if (!response.ok) throw new Error('Image fetch failed');
             
             const imageBytes = await response.arrayBuffer();
             const image = await pdfDoc.embedPng(imageBytes);
@@ -531,8 +535,9 @@ Format requirements:
               color: rgb(0.3, 0.3, 0.3),
             });
             y -= 15;
-          } catch (imgError) {
-            console.error('Error embedding image:', imgError);
+          } catch (error) {
+            console.error('Image error:', error);
+            continue; // Skip to next image
           }
         }
       }
@@ -1216,6 +1221,7 @@ Format requirements:
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                     >
+                    
                       {isTyping ? (
                         <i className="fas fa-circle-notch fa-spin"></i>
                       ) : (

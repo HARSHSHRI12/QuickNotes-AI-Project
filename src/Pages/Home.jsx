@@ -1,9 +1,16 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import React, { useEffect,useRef } from "react";
 import './Home.css'
-
+import NogenVoiceAssistant from "../components/NogenVoiceAssistant"; 
 const Home = () => {
-  
+  const nogenRef = useRef(null); // 🔁 Keeps the same instance on re-renders
+
+  useEffect(() => {
+    const nogen = new NogenVoiceAssistant();
+    nogen.onNavigate = (path) => navigate(path);  // <-- React navigation!
+    nogen.start();
+}, []);
   return (
     <div className="home-page">
       {/* Hero Section */}

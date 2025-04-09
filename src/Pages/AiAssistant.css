@@ -595,3 +595,17 @@ body.dark .mode-indicator.advanced {
   background-color: #7e5109;
   color: #f39c12;
 }
+.parse-btn {
+  background-color: #4a6fa5;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  margin-top: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.parse-btn:hover {
+  background-color: #3a5a8a;
+}

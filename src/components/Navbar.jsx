@@ -99,6 +99,13 @@ const Navbar = () => {
             </motion.div>
           </li>
           <li className="nav-item">
+           <motion.div whileHover="hover" variants={linkVariants}>
+            <Link to="/CodingPractice" className={location.pathname === '/CodingPractice' ? 'nav-link active' : 'nav-link'}>
+              <i className="fas fa-code"></i> CodingPractice
+           </Link>
+          </motion.div>
+        </li>
+          <li className="nav-item">
             <motion.div whileHover="hover" variants={linkVariants}>
               <Link to="/login" className={location.pathname === '/login' ? 'nav-link active' : 'nav-link'}>
                 <i className="fas fa-sign-in-alt"></i> Login

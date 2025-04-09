@@ -25,6 +25,7 @@ const AiAssistant = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [generatedImages, setGeneratedImages] = useState([]);
+  const [advancedInput, setAdvancedInput] = useState('');
   const [settings, setSettings] = useState({
     speechRate: 1,
     speechPitch: 1,
@@ -400,69 +401,47 @@ Format requirements:
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!message.trim() || isTyping) return;
-
-    // Handle clear command
-    if (message.trim().toLowerCase() === 'clear') {
-      setChatHistory([
-        { 
-          type: 'assistant', 
-          text: 'Chat history cleared. How can I help you now?',
-          timestamp: new Date().toISOString(),
-          id: Date.now()
-        }
-      ]);
-      setGeneratedImages([]);
-      setMessage('');
-      return;
-    }
-
+  
     addMessage('user', message);
     setMessage('');
     setIsTyping(true);
-
+  
     try {
-      const prompt = generatePrompt(message);
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-      const response = await fetch('http://localhost:3501/generate', {
+      // Prepare the complete request body
+      const requestBody = {
+        query: message,  // The actual user message
+        subject: userDetails.subject || 'General', // Required
+        course: userDetails.course || 'Unknown Course', // Required
+        classLevel: userDetails.classLevel, // Optional
+        yearSem: userDetails.yearSem, // Optional
+        importantTopics: userDetails.importantTopics, // Optional
+        formatPreference: userDetails.formatPreference || 'bullet-points', // Required with default
+        advancedMode: isAdvancedMode, // Boolean
+        userId: "current-user-id" // Add if your backend expects it
+      };
+  
+      console.log("Sending request with:", requestBody); // Debug log
+  
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/generate`, {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Access-Control-Allow-Origin': '*' 
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 
-          prompt,
-          advancedMode: isAdvancedMode,
-          subject: userDetails.subject
-        }),
-        signal: controller.signal
+        body: JSON.stringify(requestBody)
       });
-
-      clearTimeout(timeoutId);
-
+  
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        console.error("Backend validation errors:", errorData.errors); // Log detailed errors
+        throw new Error(errorData.errors?.[0]?.msg || 'Request failed');
       }
-
+  
       const data = await response.json();
+      addMessage('assistant', data.notes);
       
-      if (!data.textResponse) {
-        throw new Error('No text response received from server');
-      }
-
-      addMessage('assistant', data.textResponse);
-      
-      if (isAdvancedMode && data.images && Array.isArray(data.images)) {
-        setGeneratedImages(prev => [...prev, ...data.images]);
-      }
     } catch (error) {
-      console.error('API Error:', error);
-      const errorMessage = error.name === 'AbortError' 
-        ? 'Request timed out. Please try again.' 
-        : error.message || 'Please try again later.';
-      addMessage('assistant', `Error generating notes: ${errorMessage}`);
+      addMessage('assistant', `Error: ${error.message}`);
+      console.error('API Error Details:', error);
     } finally {
       setIsTyping(false);
     }
@@ -474,6 +453,75 @@ Format requirements:
       handleSubmit(e);
     }
   };
+  
+  //handle for AdvancedParse
+
+  const handleAdvancedParse = useCallback(() => {
+    if (!advancedInput || typeof advancedInput !== 'string' || !advancedInput.trim()) return;
+
+    try {
+        let extractedDetails = {}; // Store extracted details
+
+        // 1. Extract Course
+        const courseMatch = advancedInput.match(/\b(BCA|MCA|BSc|MSc|B\.?Tech|M\.?Tech|BA|MA|BCom|MCom|PhD)\b/i);
+        if (courseMatch) extractedDetails.course = courseMatch[1].toUpperCase();
+
+        // 2. Extract Subject (Handles flexible input)
+        const subjectMatch = advancedInput.match(/(?:notes|generate|create|study|learn)\s+(?:of|about|on|for)?\s*([a-zA-Z\s]+?)\s+(?:for|in|of|about|on|sem|year|level)/i);
+        if (subjectMatch && subjectMatch[1]) {
+            extractedDetails.subject = subjectMatch[1].trim().replace(/\b\w/g, c => c.toUpperCase()); // Capitalize first letter
+        }
+
+        // 3. Extract Level (easy/medium/hard)
+        const levelMatch = advancedInput.match(/\b(easy|medium|hard|beginner|intermediate|advanced)\b/i);
+        if (levelMatch) {
+            const levelMap = { easy: 'Beginner', medium: 'Intermediate', hard: 'Advanced' };
+            extractedDetails.classLevel = levelMap[levelMatch[1].toLowerCase()] || levelMatch[1];
+        }
+
+        // 4. Extract Year/Semester in "2nd/4th" format
+        let yearSemValue = '';
+
+        // Format: "2nd year 4th semester" → "2nd/4th"
+        const combinedMatch = advancedInput.match(/(\d+(?:st|nd|rd|th))\s*year.*?(\d+(?:st|nd|rd|th))\s*sem(?:ester)?/i);
+        if (combinedMatch) {
+            yearSemValue = `${combinedMatch[1]}/${combinedMatch[2]}`;
+        }
+
+        // Format: "4th semester 2nd year" → "2nd/4th"
+        const reverseMatch = advancedInput.match(/(\d+(?:st|nd|rd|th))\s*sem(?:ester)?.*?(\d+(?:st|nd|rd|th))\s*year/i);
+        if (reverseMatch) {
+            yearSemValue = `${reverseMatch[2]}/${reverseMatch[1]}`;
+        }
+
+        // Format: Already in "2nd/4th" format
+        const directMatch = advancedInput.match(/(\d+(?:st|nd|rd|th)\/\d+(?:st|nd|rd|th))/i);
+        if (directMatch) {
+            yearSemValue = directMatch[0];
+        }
+
+        if (yearSemValue) extractedDetails.yearSem = yearSemValue;
+
+        // 5. Extract Important Topics (More flexible pattern)
+        const topicsMatch = advancedInput.match(/(?:important topics are|topics include|covering topics are|including)\s*([a-zA-Z0-9,\s-]+)/i);
+        if (topicsMatch && topicsMatch[1]) {
+            extractedDetails.importantTopics = topicsMatch[1]
+                .split(',')
+                .map(topic => topic.trim()) // Trim spaces around each topic
+                .filter(topic => topic.length > 0) // Remove empty topics
+                .join(', '); // Join back into a string
+        }
+
+        // Set extracted details in state
+        setUserDetails(prev => ({ ...prev, ...extractedDetails }));
+
+    } catch (error) {
+        console.error("Advanced parsing error:", error);
+        addMessage('assistant', "I found some details but please review the form for accuracy.");
+    }
+}, [advancedInput, addMessage]);
+
+
 
   // Generate PDF with better error handling and image support
   const generatePDF = async (notes) => {
@@ -703,38 +751,105 @@ Format requirements:
     }
   };
 
-  // Download notes with better error handling and user feedback
-  const downloadNotes = async () => {
-    if (isExporting) return;
-    setIsExporting(true);
+ // Download notes with robust PDF generation and error handling
+const downloadNotes = async () => {
+  if (isExporting) return;
+  setIsExporting(true);
+  
+  try {
+    // Prepare notes content
+    const notes = chatHistory
+      .filter(chat => chat.type === 'assistant')
+      .map(chat => chat.text)
+      .join('\n\n');
     
-    try {
-      const notes = chatHistory
-        .filter(chat => chat.type === 'assistant')
-        .map(chat => chat.text)
-        .join('\n\n');
-      
-      if (!notes.trim()) {
-        throw new Error('No notes available to export');
-      }
-
-      let blob;
-      if (exportFormat === 'pdf') {
-        const pdfBytes = await generatePDF(notes);
-        blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      } else {
-        blob = await generateDOCX(notes);
-      }
-      
-      const fileName = `${userDetails.subject.replace(/[^a-z0-9]/gi, '_')}_notes_${new Date().toISOString().slice(0,10)}.${exportFormat}`;
-      saveAs(blob, fileName);
-    } catch (error) {
-      console.error('Export error:', error);
-      addMessage('assistant', `Export failed: ${error.message || 'Please try again.'}`);
-    } finally {
-      setIsExporting(false);
+    if (!notes.trim()) {
+      throw new Error('No notes available to export');
     }
-  };
+
+    let blob;
+    if (exportFormat === 'pdf') {
+      // Enhanced PDF generation with proper error handling
+      blob = await generatePDFWithRetry(notes);
+    } else {
+      blob = await generateDOCX(notes);
+    }
+    
+    // Sanitize filename
+    const fileName = `${userDetails.subject.replace(/[^a-z0-9]/gi, '_')}_notes_${
+      new Date().toISOString().slice(0,10)
+    }.${exportFormat}`;
+    
+    // Save file with fallback
+    try {
+      saveAs(blob, fileName);
+    } catch (saveError) {
+      console.error('File save error:', saveError);
+      // Fallback download method
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+    }
+  } catch (error) {
+    console.error('Export error:', error);
+    addMessage('assistant', `Export failed: ${error.message || 'Please try again.'}`);
+    
+    // Specific error messages for common cases
+    if (error.message.includes('PDF')) {
+      addMessage('assistant', 'Tip: Try exporting as DOCX or reduce the notes length');
+    }
+  } finally {
+    setIsExporting(false);
+  }
+};
+
+// Enhanced PDF generation with retry logic
+const generatePDFWithRetry = async (content, retries = 2) => {
+  try {
+    // Using pdf-lib for more reliable PDF generation
+    const { PDFDocument, rgb } = await import('pdf-lib');
+    const { fontkit } = await import('@pdf-lib/fontkit');
+    
+    const pdfDoc = await PDFDocument.create();
+    pdfDoc.registerFontkit(fontkit);
+    
+    // Embed fonts (you'll need to load actual font files)
+    const fontBytes = await fetch('/fonts/NotoSans-Regular.ttf').then(res => res.arrayBuffer());
+    const font = await pdfDoc.embedFont(fontBytes);
+    
+    const page = pdfDoc.addPage([595, 842]); // A4 size
+    const { width, height } = page.getSize();
+    
+    page.drawText(content, {
+      x: 50,
+      y: height - 50,
+      size: 11,
+      font,
+      color: rgb(0, 0, 0),
+      maxWidth: width - 100,
+      lineHeight: 15,
+    });
+    
+    const pdfBytes = await pdfDoc.save();
+    return new Blob([pdfBytes], { type: 'application/pdf' });
+  } catch (error) {
+    if (retries > 0) {
+      console.log(`Retrying PDF generation (${retries} attempts left)`);
+      return generatePDFWithRetry(content, retries - 1);
+    }
+    throw new Error(`PDF generation failed: ${error.message}`);
+  }
+};
+
+// DOCX generator example
+
 
   // Format message with markdown and XSS protection
   const formatMessage = useCallback((text) => {
@@ -817,89 +932,132 @@ Format requirements:
               </div>
               
               <AnimatePresence>
-                {showDetailsForm ? (
-                  <motion.div 
-                    className="details-form"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <h3>Enter Your Details</h3>
-                    <div className="form-grid">
-                      <div className="form-group">
-                        <label>Course/Program*</label>
-                        <input
-                          type="text"
-                          name="course"
-                          value={userDetails.course}
-                          onChange={handleDetailChange}
-                          className={errors.course ? 'error' : ''}
-                        />
-                        {errors.course && <span className="error-message">{errors.course}</span>}
-                      </div>
-                      
-                      <div className="form-group">
-                        <label>Subject*</label>
-                        <input
-                          type="text"
-                          name="subject"
-                          value={userDetails.subject}
-                          onChange={handleDetailChange}
-                          className={errors.subject ? 'error' : ''}
-                        />
-                        {errors.subject && <span className="error-message">{errors.subject}</span>}
-                      </div>
-                      
-                      <div className="form-group">
-                        <label>Class Level</label>
-                        <input
-                          type="text"
-                          name="classLevel"
-                          value={userDetails.classLevel}
-                          onChange={handleDetailChange}
-                          className={errors.classLevel ? 'error' : ''}
-                        />
-                        {errors.classLevel && <span className="error-message">{errors.classLevel}</span>}
-                      </div>
-                      
-                      <div className="form-group">
-                        <label>Year/Semester (e.g., 2nd/4th)</label>
-                        <input
-                          type="text"
-                          name="yearSem"
-                          value={userDetails.yearSem}
-                          onChange={handleDetailChange}
-                          className={errors.yearSem ? 'error' : ''}
-                          placeholder="e.g., 2nd/4th"
-                        />
-                        {errors.yearSem && <span className="error-message">{errors.yearSem}</span>}
-                      </div>
-                      
-                      <div className="form-group full-width">
-                        <label>Important Topics (comma separated)</label>
-                        <textarea
-                          name="importantTopics"
-                          value={userDetails.importantTopics}
-                          onChange={handleDetailChange}
-                          placeholder="e.g., Calculus, Thermodynamics, Organic Chemistry"
-                        />
-                      </div>
-                      
-                      <div className="form-group full-width">
-                        <label>Format Preference</label>
-                        <select
-                          name="formatPreference"
-                          value={userDetails.formatPreference}
-                          onChange={handleDetailChange}
-                        >
-                          <option value="bullet-points">Bullet Points</option>
-                          <option value="paragraph">Paragraph</option>
-                          <option value="outline">Outline</option>
-                          <option value="qna">Q&A Format</option>
-                        </select>
-                      </div>
-                    </div>
+  {showDetailsForm ? (
+    <motion.div 
+      className="details-form"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <h3>Enter Your Details</h3>
+      
+      {/* Advanced Input Section - Only shown when advanced mode is on */}
+      {isAdvancedMode && (
+        <motion.div
+          className="advanced-input-container"
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="form-group full-width">
+            <label>
+              <i className="fas fa-magic"></i> Describe what you need
+              <span className="hint">(I'll auto-fill the form below)</span>
+            </label>
+            <textarea
+              value={advancedInput}
+              onChange={(e) => setAdvancedInput(e.target.value)}
+              placeholder="Example: generate notes of numerical method for BCA 2nd semester"
+              rows={3}
+            />
+            <div className="advanced-actions">
+              <button 
+                type="button" 
+                className="parse-btn"
+                onClick={handleAdvancedParse}
+                disabled={!advancedInput.trim()}
+              >
+                <i className="fas fa-sparkles"></i> Auto-Fill Form
+              </button>
+              <button 
+                type="button" 
+                className="example-btn"
+                onClick={() => setAdvancedInput("generate notes of numerical method for BCA 2nd sem")}
+              >
+                <i className="fas fa-lightbulb"></i> Load Example
+              </button>
+            </div>
+          </div>
+          <div className="divider"></div>
+        </motion.div>
+      )}
+
+      <div className="form-grid">
+        <div className="form-group">
+          <label>Course/Program*</label>
+          <input
+            type="text"
+            name="course"
+            value={userDetails.course}
+            onChange={handleDetailChange}
+            className={errors.course ? 'error' : ''}
+          />
+          {errors.course && <span className="error-message">{errors.course}</span>}
+        </div>
+        
+        <div className="form-group">
+          <label>Subject*</label>
+          <input
+            type="text"
+            name="subject"
+            value={userDetails.subject}
+            onChange={handleDetailChange}
+            className={errors.subject ? 'error' : ''}
+          />
+          {errors.subject && <span className="error-message">{errors.subject}</span>}
+        </div>
+        
+        <div className="form-group">
+          <label>Class Level</label>
+          <input
+            type="text"
+            name="classLevel"
+            value={userDetails.classLevel}
+            onChange={handleDetailChange}
+            className={errors.classLevel ? 'error' : ''}
+          />
+          {errors.classLevel && <span className="error-message">{errors.classLevel}</span>}
+        </div>
+        
+        <div className="form-group">
+          <label>Year/Semester (e.g., 2nd/4th)</label>
+          <input
+            type="text"
+            name="yearSem"
+            value={userDetails.yearSem}
+            onChange={handleDetailChange}
+            className={errors.yearSem ? 'error' : ''}
+            placeholder="e.g., 2nd/4th"
+          />
+          {errors.yearSem && <span className="error-message">{errors.yearSem}</span>}
+        </div>
+        
+        <div className="form-group full-width">
+          <label>Important Topics (comma separated)</label>
+          <textarea
+            name="importantTopics"
+            value={userDetails.importantTopics}
+            onChange={handleDetailChange}
+            placeholder="e.g., Calculus, Thermodynamics, Organic Chemistry"
+          />
+        </div>
+        
+        <div className="form-group full-width">
+          <label>Format Preference</label>
+          <select
+            name="formatPreference"
+            value={userDetails.formatPreference}
+            onChange={handleDetailChange}
+          >
+            <option value="bullet-points">Bullet Points</option>
+            <option value="paragraph">Paragraph</option>
+            <option value="outline">Outline</option>
+            <option value="qna">Q&A Format</option>
+          </select>
+        </div>
+      </div>
                     
                     <motion.button 
                       className="submit-details-btn"

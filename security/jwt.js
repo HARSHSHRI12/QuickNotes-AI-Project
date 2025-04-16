@@ -1,40 +1,35 @@
-const jwt=require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 
-//create middleware
+// Middleware to check the JWT token
+const jwtAuthMiddleware = (req, res, next) => {
+  // First, check if authorization header exists
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    return res.status(401).json({ error: 'Invalid Token..' });
+  }
 
-const jwtAuthMiddleware=(req,res,next)=>{
+  // Extract JWT token from authorization header
+  const token = authorization.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
-  //first check request header has authorization or not
+  try {
+    // Verify the JWT token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-const authorization=req.headers.authorization;
-if(!authorization){
-  return res.status(401).json({error:'Invalid Token..'});
-}
-    //extract jwt token from request headers
-    const token=req.headers.authorization.split(' ')[1];
-    if(!token){
-        return res.status(401).json({error:'Unotherization'});
-    }
-    try{
-      //verify the jwt token
-      const decoded=jwt.verify(token,process.env.JWT_SECRET);
-
-      // attach user info to req object
-      req.user=decoded;
-      next();
-    }
-    catch(err){
-        console.log(err);
-        res.status(401).json({error:'Invalid Token!!'})
-    }
+    // Attach user info to the request object
+    req.user = decoded;
+    next();
+  } catch (err) {
+    console.log(err);
+    res.status(401).json({ error: 'Invalid Token!!' });
+  }
 };
 
-//function to genrate token
-
-const generateToken=(userData)=>{
-
-    //generate new jwt token using user data
-  return jwt.sign(userData,process.env.JWT_SECRET);
+// Function to generate a new JWT token
+const generateToken = (userData) => {
+  return jwt.sign(userData, process.env.JWT_SECRET, { expiresIn: '1h' }); // Set expiration as needed
 }
 
-module.exports={jwtAuthMiddleware,generateToken};
+module.exports = { jwtAuthMiddleware, generateToken };

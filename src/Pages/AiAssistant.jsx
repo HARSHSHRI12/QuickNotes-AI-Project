@@ -4,6 +4,8 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { Packer, Document, Paragraph, TextRun, HeadingLevel } from 'docx';
 import { saveAs } from 'file-saver';
 import './AiAssistant.css';
+import { useNavigate } from 'react-router-dom';
+import QuizComponent from '../components/QuizComponent';
 
 const AiAssistant = () => {
   // State declarations
@@ -26,6 +28,65 @@ const AiAssistant = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [generatedImages, setGeneratedImages] = useState([]);
   const [advancedInput, setAdvancedInput] = useState('');
+  const [messages, setMessages] = useState([]);
+  //for quize 
+  const [showQuiz, setShowQuiz] = useState(false);
+ const [showQuizButton, setShowQuizButton] = useState(false); // Show quiz button ke liye state
+const [quizQuestions, setQuizQuestions] = useState([]);
+
+useEffect(() => {
+  if (messages.some((m) => m.role === 'assistant')) {
+    setShowQuizButton(true);
+  }
+}, [messages]);
+
+  
+const generateNotesAndQuiz = async () => {
+  // Your notes generation logic here...
+  const notes = "Some AI generated content...";
+
+  // Dummy logic to generate questions from notes (replace with API later)
+  const generatedQuestions = [
+    {
+      question: "What is OSI model?",
+      options: ["A protocol", "A software", "A networking model", "A hardware device"],
+      answer: "A networking model",
+    },
+    {
+      question: "Which layer handles routing?",
+      options: ["Transport", "Network", "Data Link", "Application"],
+      answer: "Network",
+    }
+  ];
+
+  // ✅ Navigate to quiz page with questions
+  navigate('/quiz', { state: { questions: generatedQuestions } });
+};
+
+  //some implementation of quize
+
+  const questions = [
+    { question: "What is 2 + 2?", options: ["2", "3", "4", "5"], correctAnswer: "4", topic: "Math" },
+    { question: "What is 5 + 5?", options: ["5", "10", "15", "20"], correctAnswer: "10", topic: "Math" },
+    // Add more questions here
+  ];
+  useEffect(() => {
+    // Here, you can make an API call to fetch quiz questions or set default ones
+    setQuizQuestions(questions);
+  }, []);
+
+  const startQuiz = () => {
+    setIsQuizStarted(true);
+  };
+
+  const handleQuizCompletion = (result) => {
+    console.log('Quiz Completed!', result);
+    // You can show the result or store it in the backend
+  };
+
+
+
+//previous handeller
   const [settings, setSettings] = useState({
     speechRate: 1,
     speechPitch: 1,
@@ -55,61 +116,63 @@ const AiAssistant = () => {
   const recognitionRef = useRef(null);
   const speechSynthesisRef = useRef(null);
 
-  // Initialize speech recognition with better error handling
   useEffect(() => {
-    const initSpeechRecognition = () => {
-      if (!('webkitSpeechRecognition' in window)) {
-        addMessage('assistant', 'Your browser does not support voice input');
-      }
-      try {
-        if ('webkitSpeechRecognition' in window) {
-          recognitionRef.current = new window.webkitSpeechRecognition();
-          recognitionRef.current.continuous = false;
-          recognitionRef.current.interimResults = false;
-          recognitionRef.current.lang = 'en-US';
-
-          recognitionRef.current.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            setMessage(prev => prev ? `${prev} ${transcript}` : transcript);
-            setIsListening(false);
-          };
-
-          recognitionRef.current.onerror = (event) => {
-            console.error('Speech recognition error', event.error);
-            setIsListening(false);
-            addMessage('assistant', `Speech recognition error: ${event.error}`);
-          };
-
-          recognitionRef.current.onend = () => {
-            if (isListening) {
-              setIsListening(false);
-            }
-          };
-        } else {
-          console.warn('Speech recognition not supported in this browser');
-        }
-      } catch (error) {
-        console.error('Failed to initialize speech recognition:', error);
-      }
-    };
-
-    initSpeechRecognition();
-
+    const isSpeechRecognitionSupported = 'webkitSpeechRecognition' in window;
+  
+    if (!isSpeechRecognitionSupported) {
+      addMessage('assistant', 'Your browser does not support voice input');
+      return;
+    }
+  
+    try {
+      const recognition = new window.webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+  
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setMessage(prev => prev ? `${prev} ${transcript}` : transcript);
+        setIsListening(false);
+      };
+  
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+        addMessage('assistant', `Speech recognition error: ${event.error}`);
+      };
+  
+      recognition.onend = () => {
+        if (isListening) setIsListening(false);
+      };
+  
+      recognitionRef.current = recognition;
+    } catch (error) {
+      console.error('Failed to initialize speech recognition:', error);
+      addMessage('assistant', 'Speech recognition setup failed.');
+    }
+  
     return () => {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
+        recognitionRef.current = null;
       }
     };
   }, []);
+  
 
-  // Apply theme
   useEffect(() => {
     try {
-      document.body.className = settings.theme;
+      if (settings?.theme) {
+        document.body.className = settings.theme;
+      } else {
+        console.warn('Theme not found in settings');
+      }
     } catch (error) {
       console.error('Failed to apply theme:', error);
     }
-  }, [settings.theme]);
+  }, [settings?.theme]);
+  
 
   // Auto-scroll to bottom with debounce
   useEffect(() => {
@@ -125,6 +188,18 @@ const AiAssistant = () => {
   }, [chatHistory, generatedImages]);
 
  
+  const onQuizComplete = () => {
+    const result = {
+      userId: "Harsh", // Replace with actual user id (can be from JWT/Auth later)
+      subject: "Operating System",
+      topics: ["CPU Scheduling", "Deadlocks"],
+      score: 7,
+      totalQuestions: 10,
+    };
+    submitQuizResult(result);
+  };
+  
+
 
   // Focus input when form is submitted
   useEffect(() => {
@@ -136,6 +211,19 @@ const AiAssistant = () => {
       }
     }
   }, [showDetailsForm]);
+
+  // {/* Quiz Button when notes are generated */}
+
+  {showQuizButton && (
+    <motion.div
+      className="chat-header"
+      onClick={() => navigate('/quiz')}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      Start Quiz
+    </motion.div>
+  )}
 
   // Format year/semester input with better validation
   const formatYearSemInput = useCallback((value) => {
@@ -233,14 +321,14 @@ const AiAssistant = () => {
       switch (name) {
         case 'course':
           if (!trimmedValue) return 'Course is required';
-          if (trimmedValue.length < 3) return 'Course must be at least 3 characters';
+          if (trimmedValue.length < 2) return 'Course must be at least 3 characters';
           if (/^\d/.test(trimmedValue)) return 'Course cannot start with a number';
           if (/[^a-zA-Z0-9\s\-]/.test(trimmedValue)) return 'Invalid characters';
           return '';
         
         case 'subject':
           if (!trimmedValue) return 'Subject is required';
-          if (trimmedValue.length < 3) return 'Subject must be at least 3 characters';
+          if (trimmedValue.length < 2) return 'Subject must be at least 3 characters';
           if (/^\d/.test(trimmedValue)) return 'Subject cannot start with a number';
           if (!/^[a-zA-Z]/.test(trimmedValue)) return 'Subject must start with a letter';
           if (/[^a-zA-Z0-9\s\-]/.test(trimmedValue)) return 'Subject contains invalid characters';
@@ -397,55 +485,64 @@ Format requirements:
     }
   }, [isAdvancedMode, userDetails]);
 
-  // Handle form submission with better error handling
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!message.trim() || isTyping) return;
-  
-    addMessage('user', message);
-    setMessage('');
-    setIsTyping(true);
-  
-    try {
-      // Prepare the complete request body
-      const requestBody = {
-        query: message,  // The actual user message
-        subject: userDetails.subject || 'General', // Required
-        course: userDetails.course || 'Unknown Course', // Required
-        classLevel: userDetails.classLevel, // Optional
-        yearSem: userDetails.yearSem, // Optional
-        importantTopics: userDetails.importantTopics, // Optional
-        formatPreference: userDetails.formatPreference || 'bullet-points', // Required with default
-        advancedMode: isAdvancedMode, // Boolean
-        userId: "current-user-id" // Add if your backend expects it
-      };
-  
-      console.log("Sending request with:", requestBody); // Debug log
-  
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/generate`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Backend validation errors:", errorData.errors); // Log detailed errors
-        throw new Error(errorData.errors?.[0]?.msg || 'Request failed');
-      }
-  
-      const data = await response.json();
-      addMessage('assistant', data.notes);
-      
-    } catch (error) {
-      addMessage('assistant', `Error: ${error.message}`);
-      console.error('API Error Details:', error);
-    } finally {
-      setIsTyping(false);
+ // Handle form submission with better error handling
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!message.trim() || isTyping) return;
+
+  addMessage('user', message);
+  setMessage('');
+  setIsTyping(true);
+
+  try {
+    // Prepare the complete request body
+    const requestBody = {
+      query: message,
+      subject: userDetails.subject || 'General',
+      course: userDetails.course || 'Unknown Course',
+      classLevel: userDetails.classLevel || '',
+      yearSem: userDetails.yearSem || '',
+      importantTopics: userDetails.importantTopics || '',
+      formatPreference: userDetails.formatPreference || 'bullet-points',
+      advancedMode: isAdvancedMode,
+      userId: "current-user-id"
+    };
+
+    console.log("📤 Sending request with:", requestBody);
+
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("❌ Backend validation errors:", errorData.errors);
+      throw new Error(errorData.errors?.[0]?.msg || 'Request failed');
     }
-  };
+
+    const data = await response.json();
+    console.log("✅ API Response:", data);
+
+    // Defensive check for notes
+    if (data?.data && typeof data.data === 'string') {
+      addMessage('assistant', data.data);
+    } else {
+      addMessage('assistant', "❗ No notes were returned. Please try again.");
+    }
+    
+
+  } catch (error) {
+    addMessage('assistant', `⚠️ Error: ${error.message}`);
+    console.error('⚠️ API Error Details:', error);
+  } finally {
+    setIsTyping(false);
+  }
+};
+
 
   // Handle key press (Enter to send)
   const handleKeyPress = (e) => {
@@ -454,73 +551,141 @@ Format requirements:
     }
   };
   
-  //handle for AdvancedParse
-
   const handleAdvancedParse = useCallback(() => {
     if (!advancedInput || typeof advancedInput !== 'string' || !advancedInput.trim()) return;
-
+  
     try {
-        let extractedDetails = {}; // Store extracted details
-
-        // 1. Extract Course
-        const courseMatch = advancedInput.match(/\b(BCA|MCA|BSc|MSc|B\.?Tech|M\.?Tech|BA|MA|BCom|MCom|PhD)\b/i);
-        if (courseMatch) extractedDetails.course = courseMatch[1].toUpperCase();
-
-        // 2. Extract Subject (Handles flexible input)
-        const subjectMatch = advancedInput.match(/(?:notes|generate|create|study|learn)\s+(?:of|about|on|for)?\s*([a-zA-Z\s]+?)\s+(?:for|in|of|about|on|sem|year|level)/i);
+      let extractedDetails = {
+        course: '',
+        subject: '',
+        classLevel: '',
+        yearSem: '',
+        importantTopics: ''
+      };
+  
+      // 1. Extract Course (same as before)
+      const courseMatch = advancedInput.match(/\b(BCA|MCA|BSc|MSc|B\.?Tech|M\.?Tech|BA|MA|BCom|MCom|PhD|BBA|MBA|BE|ME)\b/i);
+      if (courseMatch) extractedDetails.course = courseMatch[1].toUpperCase();
+  
+      // 2. IMPROVED SUBJECT EXTRACTION
+      // First try to find subject after "of" or "for"
+      const subjectPatterns = [
+        // Pattern for "notes for BCA... of DBMS"
+        /(?:notes|generate|create|study|learn)\s+(?:for|about|on)\s+.*?(?:\bof\b)\s+([a-zA-Z\s]+?)(?:\s+(?:for|in|of|about|on|sem|year|level|topics)|$)/i,
+        // Pattern for "notes of DBMS for BCA..."
+        /(?:notes|generate|create|study|learn)\s+(?:of|about|on)\s+([a-zA-Z\s]+?)(?:\s+(?:for|in|of|about|on|sem|year|level|topics)|$)/i,
+        // General pattern for subject at end
+        /(?:notes|generate|create|study|learn)\s+(?:of|about|on|for)?\s*([a-zA-Z\s]+)$/i,
+        // Pattern for subject at beginning
+        /^([a-zA-Z\s]+)\s+(?:notes|study|material)/i
+      ];
+      
+      for (const pattern of subjectPatterns) {
+        const subjectMatch = advancedInput.match(pattern);
         if (subjectMatch && subjectMatch[1]) {
-            extractedDetails.subject = subjectMatch[1].trim().replace(/\b\w/g, c => c.toUpperCase()); // Capitalize first letter
+          const potentialSubject = subjectMatch[1].trim();
+          // Skip if it matches course or other keywords
+          if (!potentialSubject.match(/\b(notes|for|of|about|on|sem|year|level|topics|BCA|MCA|BSc|MSc|B\.?Tech|M\.?Tech)\b/i)) {
+            extractedDetails.subject = potentialSubject.replace(/\b\w/g, c => c.toUpperCase());
+            break;
+          }
         }
-
-        // 3. Extract Level (easy/medium/hard)
-        const levelMatch = advancedInput.match(/\b(easy|medium|hard|beginner|intermediate|advanced)\b/i);
-        if (levelMatch) {
-            const levelMap = { easy: 'Beginner', medium: 'Intermediate', hard: 'Advanced' };
-            extractedDetails.classLevel = levelMap[levelMatch[1].toLowerCase()] || levelMatch[1];
+      }
+  
+      // 3. Extract Level (same as before)
+      const levelMap = {
+        easy: 'Beginner', 
+        beginner: 'Beginner',
+        medium: 'Intermediate',
+        intermediate: 'Intermediate',
+        hard: 'Advanced',
+        advanced: 'Advanced'
+      };
+      
+      const levelMatch = advancedInput.match(/\b(easy|medium|hard|beginner|intermediate|advanced)\b/i);
+      if (levelMatch) {
+        extractedDetails.classLevel = levelMap[levelMatch[1].toLowerCase()] || levelMatch[1];
+      }
+  
+      // 4. Extract Year/Semester (same as before)
+      const yearSemPatterns = [
+        /(\d+(?:st|nd|rd|th))\s*year.*?(\d+(?:st|nd|rd|th))\s*sem(?:ester)?/i,
+        /(\d+(?:st|nd|rd|th))\s*sem(?:ester)?.*?(\d+(?:st|nd|rd|th))\s*year/i,
+        /(\d+(?:st|nd|rd|th)\/\d+(?:st|nd|rd|th))/i,
+        /(\d+(?:st|nd|rd|th))\s*year/i,
+        /(\d+(?:st|nd|rd|th))\s*sem(?:ester)?/i
+      ];
+      
+      for (const pattern of yearSemPatterns) {
+        const match = advancedInput.match(pattern);
+        if (match) {
+          if (match[1] && match[2]) {
+            extractedDetails.yearSem = `${match[1]}/${match[2]}`;
+          } else if (match[1] && pattern.toString().includes('year')) {
+            extractedDetails.yearSem = `${match[1]}/`;
+          } else if (match[1] && pattern.toString().includes('sem')) {
+            extractedDetails.yearSem = `/${match[1]}`;
+          }
+          break;
         }
-
-        // 4. Extract Year/Semester in "2nd/4th" format
-        let yearSemValue = '';
-
-        // Format: "2nd year 4th semester" → "2nd/4th"
-        const combinedMatch = advancedInput.match(/(\d+(?:st|nd|rd|th))\s*year.*?(\d+(?:st|nd|rd|th))\s*sem(?:ester)?/i);
-        if (combinedMatch) {
-            yearSemValue = `${combinedMatch[1]}/${combinedMatch[2]}`;
-        }
-
-        // Format: "4th semester 2nd year" → "2nd/4th"
-        const reverseMatch = advancedInput.match(/(\d+(?:st|nd|rd|th))\s*sem(?:ester)?.*?(\d+(?:st|nd|rd|th))\s*year/i);
-        if (reverseMatch) {
-            yearSemValue = `${reverseMatch[2]}/${reverseMatch[1]}`;
-        }
-
-        // Format: Already in "2nd/4th" format
-        const directMatch = advancedInput.match(/(\d+(?:st|nd|rd|th)\/\d+(?:st|nd|rd|th))/i);
-        if (directMatch) {
-            yearSemValue = directMatch[0];
-        }
-
-        if (yearSemValue) extractedDetails.yearSem = yearSemValue;
-
-        // 5. Extract Important Topics (More flexible pattern)
-        const topicsMatch = advancedInput.match(/(?:important topics are|topics include|covering topics are|including)\s*([a-zA-Z0-9,\s-]+)/i);
+      }
+  
+      // 5. Extract Important Topics (same as before)
+      const topicsPatterns = [
+        /(?:important topics are|topics include|covering topics are|including)\s*([a-zA-Z0-9,\s-]+)/i,
+        /(?:cover|include)\s*([a-zA-Z0-9,\s-]+?)\s*(?:topics|concepts)/i,
+        /(?:focus on|about)\s*([a-zA-Z0-9,\s-]+)/i
+      ];
+      
+      for (const pattern of topicsPatterns) {
+        const topicsMatch = advancedInput.match(pattern);
         if (topicsMatch && topicsMatch[1]) {
-            extractedDetails.importantTopics = topicsMatch[1]
-                .split(',')
-                .map(topic => topic.trim()) // Trim spaces around each topic
-                .filter(topic => topic.length > 0) // Remove empty topics
-                .join(', '); // Join back into a string
+          extractedDetails.importantTopics = topicsMatch[1]
+            .split(/[,&]| and /)
+            .map(topic => topic.trim())
+            .filter(topic => topic.length > 0)
+            .join(', ');
+          break;
         }
-
-        // Set extracted details in state
-        setUserDetails(prev => ({ ...prev, ...extractedDetails }));
-
+      }
+  
+      // Final check - if subject not found but "of" exists
+      if (!extractedDetails.subject) {
+        const ofMatch = advancedInput.match(/\bof\s+([a-zA-Z\s]+?)(?:\s+(?:for|in|about|on|sem|year|level|topics))|$/i);
+        if (ofMatch && ofMatch[1]) {
+          const potentialSubject = ofMatch[1].trim();
+          if (!potentialSubject.match(/\b(notes|for|of|about|on|sem|year|level|topics)\b/i)) {
+            extractedDetails.subject = potentialSubject.replace(/\b\w/g, c => c.toUpperCase());
+          }
+        }
+      }
+  
+      // Set extracted details in state
+      setUserDetails(prev => ({ 
+        ...prev, 
+        ...extractedDetails,
+        course: extractedDetails.course || prev.course,
+        subject: extractedDetails.subject || prev.subject,
+        classLevel: extractedDetails.classLevel || prev.classLevel,
+        yearSem: extractedDetails.yearSem || prev.yearSem,
+        importantTopics: extractedDetails.importantTopics || prev.importantTopics
+      }));
+  
+      // Show success message with what was extracted
+      let successMsg = "I've auto-filled these details:";
+      if (extractedDetails.course) successMsg += `\n- Course: ${extractedDetails.course}`;
+      if (extractedDetails.subject) successMsg += `\n- Subject: ${extractedDetails.subject}`;
+      if (extractedDetails.yearSem) successMsg += `\n- Year/Sem: ${extractedDetails.yearSem}`;
+      if (extractedDetails.classLevel) successMsg += `\n- Level: ${extractedDetails.classLevel}`;
+      if (extractedDetails.importantTopics) successMsg += `\n- Topics: ${extractedDetails.importantTopics}`;
+      
+      addMessage('assistant', successMsg);
+  
     } catch (error) {
-        console.error("Advanced parsing error:", error);
-        addMessage('assistant', "I found some details but please review the form for accuracy.");
+      console.error("Advanced parsing error:", error);
+      addMessage('assistant', "I found some details but please review the form for accuracy.");
     }
-}, [advancedInput, addMessage]);
-
+  }, [advancedInput, addMessage]);
 
 
   // Generate PDF with better error handling and image support
@@ -621,7 +786,7 @@ Format requirements:
         y -= (isHeading ? 15 : 10);
       }
       
-      const footerText = `Generated by Quick Notes AI • Page ${pdfDoc.getPageCount()}`;
+      const footerText = `Generated by Nogen AI • Page ${pdfDoc.getPageCount()}`;
       const footerWidth = font.widthOfTextAtSize(footerText, 9);
       page.drawText(footerText, {
         x: (width - footerWidth) / 2,
@@ -721,7 +886,7 @@ Format requirements:
       
       children.push(
         new Paragraph({
-          text: `Generated by Quick Notes AI on ${new Date().toLocaleDateString()}`,
+          text: `Generated by Nogen AI on ${new Date().toLocaleDateString()}`,
           spacing: { before: 300 },
           style: 'footer',
         })
@@ -750,6 +915,56 @@ Format requirements:
       throw new Error('Failed to generate Word document');
     }
   };
+//for textarea mic start function 
+let recognitionInstance = null;
+
+const startListening = () => {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    alert("Speech Recognition is not supported in your browser.");
+    return;
+  }
+
+  if (recognitionInstance) {
+    recognitionInstance.abort(); // old instance ko close kar
+  }
+
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    console.log("🎤 Listening...");
+  };
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    setAdvancedInput((prev) => prev + ' ' + transcript);
+    console.log("✅ You said:", transcript);
+  };
+
+  recognition.onerror = (event) => {
+    console.error("❌ Speech error:", event.error);
+    if (event.error === "not-allowed") {
+      alert("Mic access not allowed. Please enable it in browser settings.");
+    } else if (event.error === "aborted") {
+      alert("Mic session was interrupted. Try again.");
+    } else {
+      alert("Mic error: " + event.error);
+    }
+  };
+
+  recognition.onend = () => {
+    console.log("🛑 Mic session ended.");
+    recognitionInstance = null;
+  };
+
+  recognition.start();
+  recognitionInstance = recognition;
+};
+
+
+  
 
  // Download notes with robust PDF generation and error handling
 const downloadNotes = async () => {
@@ -905,6 +1120,11 @@ const generatePDFWithRetry = async (content, retries = 2) => {
   };
 
   return (
+
+    //for Quiz 
+
+    
+    //previous logic
     <div className="ai-assistant-page">
       <div className="container">
         <div className="row">
@@ -944,45 +1164,59 @@ const generatePDFWithRetry = async (content, retries = 2) => {
       
       {/* Advanced Input Section - Only shown when advanced mode is on */}
       {isAdvancedMode && (
-        <motion.div
-          className="advanced-input-container"
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 0.3 }}
+  <motion.div
+    className="advanced-input-container"
+    initial={{ opacity: 0, height: 0 }}
+    animate={{ opacity: 1, height: 'auto' }}
+    exit={{ opacity: 0, height: 0 }}
+    transition={{ duration: 0.3 }}
+  >
+    <div className="form-group full-width">
+      <label>
+        <i className="fas fa-magic"></i> Describe what you need
+        <span className="hint">(I'll auto-fill the form below)</span>
+      </label>
+
+      <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        <textarea
+          value={advancedInput}
+          onChange={(e) => setAdvancedInput(e.target.value)}
+          placeholder="Example: generate notes of numerical method for BCA 2nd semester"
+          rows={3}
+          style={{ flex: 1 }}
+        />
+        <button
+          type="button"
+          onClick={startListening}
+          className="mic-btn"
+          title="Speak your query"
         >
-          <div className="form-group full-width">
-            <label>
-              <i className="fas fa-magic"></i> Describe what you need
-              <span className="hint">(I'll auto-fill the form below)</span>
-            </label>
-            <textarea
-              value={advancedInput}
-              onChange={(e) => setAdvancedInput(e.target.value)}
-              placeholder="Example: generate notes of numerical method for BCA 2nd semester"
-              rows={3}
-            />
-            <div className="advanced-actions">
-              <button 
-                type="button" 
-                className="parse-btn"
-                onClick={handleAdvancedParse}
-                disabled={!advancedInput.trim()}
-              >
-                <i className="fas fa-sparkles"></i> Auto-Fill Form
-              </button>
-              <button 
-                type="button" 
-                className="example-btn"
-                onClick={() => setAdvancedInput("generate notes of numerical method for BCA 2nd sem")}
-              >
-                <i className="fas fa-lightbulb"></i> Load Example
-              </button>
-            </div>
-          </div>
-          <div className="divider"></div>
-        </motion.div>
-      )}
+          🎤
+        </button>
+      </div>
+
+      <div className="advanced-actions">
+        <button 
+          type="button" 
+          className="parse-btn"
+          onClick={handleAdvancedParse}
+          disabled={!advancedInput.trim()}
+        >
+          <i className="fas fa-sparkles"></i> Auto-Fill Form
+        </button>
+        <button 
+          type="button" 
+          className="example-btn"
+          onClick={() => setAdvancedInput("generate notes of numerical method for BCA 2nd sem")}
+        >
+          <i className="fas fa-lightbulb"></i> Load Example
+        </button>
+      </div>
+    </div>
+    <div className="divider"></div>
+  </motion.div>
+)}
+
 
       <div className="form-grid">
         <div className="form-group">
@@ -1007,8 +1241,7 @@ const generatePDFWithRetry = async (content, retries = 2) => {
             className={errors.subject ? 'error' : ''}
           />
           {errors.subject && <span className="error-message">{errors.subject}</span>}
-        </div>
-        
+        </div>        
         <div className="form-group">
           <label>Class Level</label>
           <input
@@ -1157,7 +1390,6 @@ const generatePDFWithRetry = async (content, retries = 2) => {
                     </p>
                   </div>
                 </div>
-                
                 <div className="chat-actions">
                   <motion.button 
                     className="action-btn"
@@ -1306,6 +1538,27 @@ const generatePDFWithRetry = async (content, retries = 2) => {
                                 ))}
                               </div>
                             )}
+                          {/* ✅ Show this button only if notes are generated */}
+                        {messages.some((m) => m.role === 'assistant') && (
+                          <button onClick={generateNotesAndQuiz} className="quiz-btn">
+                            🎯 Take Quiz Based on These Notes
+                          </button>
+                        )}
+
+                        {/* ✅ Show "Start Quiz" button only after notes are generated */}
+                        {showQuizButton && (
+                          <motion.div
+                            className="chat-header"
+                            onClick={() => navigate('/quiz')} // Navigate to Quiz page
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            Start Quiz
+                          </motion.div>
+                        )}
+                      
+
+
                             
                             <div className="message-timestamp">
                               {new Date(chat.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1353,6 +1606,13 @@ const generatePDFWithRetry = async (content, retries = 2) => {
                 )}
                 <div ref={messagesEndRef} />
               </div>
+
+              {/* //button show quize 
+
+              <button onClick={() => setShowQuiz(true)} className="start-quiz-btn">
+                Start Quiz
+              </button> */}
+
 
               {!showDetailsForm && (
                 <motion.form 

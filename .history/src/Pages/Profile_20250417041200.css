@@ -1,0 +1,174 @@
+/* Profile container */
+.profile-container {
+  max-width: 800px;
+  margin: auto;
+  padding: 2rem;
+  background: #f5f7fa;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  transition: all 0.4s ease-in-out;
+}
+
+/* Heading style */
+.profile-container h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: #333;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* Avatar style */
+.profile-avatar {
+  display: block;
+  margin: 0 auto 1.5rem auto;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+/* Hover effect for avatar */
+.profile-avatar:hover {
+  transform: scale(1.05);
+}
+
+/* Profile field styling */
+.profile-field {
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+  color: #444;
+}
+
+.profile-field strong {
+  color: #222;
+  font-weight: bold;
+}
+
+/* Input and textarea styling */
+.profile-input,
+.profile-textarea {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Focused state for inputs and textareas */
+.profile-input:focus,
+.profile-textarea:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 10px rgba(74, 144, 226, 0.3);
+  outline: none;
+}
+
+/* Label styling */
+.profile-label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  color: #555;
+}
+
+/* Skills, Bio, Goals section layout */
+.profile-section {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+  transition: transform 0.3s ease;
+}
+
+/* Hover effect for section blocks */
+.profile-section:hover {
+  transform: translateY(-5px);
+}
+
+/* Section title */
+.profile-section h3 {
+  font-size: 1.5rem;
+  color: #007bff;
+  margin-bottom: 1rem;
+  font-weight: bold;
+}
+
+/* Profile buttons container */
+.profile-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+/* Button styles */
+.profile-buttons button {
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Hover effect for buttons */
+.profile-buttons button:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+/* Edit, Save, Cancel button styles */
+.edit-btn {
+  background-color: #007bff;
+  color: white;
+}
+
+.cancel-btn {
+  background-color: #6c757d;
+  color: white;
+}
+
+.save-btn {
+  background-color: #28a745;
+  color: white;
+}
+
+/* Additional styling for the edit form sections */
+.profile-form {
+  margin-top: 1.5rem;
+}
+
+.profile-form .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.profile-form .form-group label {
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.profile-form .form-group input,
+.profile-form .form-group textarea {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  transition: all 0.3s ease;
+}
+
+/* Focused input styling for form fields */
+.profile-form .form-group input:focus,
+.profile-form .form-group textarea:focus {
+  border-color: #28a745;
+  box-shadow: 0 0 8px rgba(40, 167, 69, 0.2);
+}
+
+/* Adding some space between sections */
+.profile-form .form-group .profile-section {
+  margin-bottom: 20px;
+}
+

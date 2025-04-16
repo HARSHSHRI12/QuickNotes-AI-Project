@@ -609,3 +609,15 @@ body.dark .mode-indicator.advanced {
 .parse-btn:hover {
   background-color: #3a5a8a;
 }
+.mic-btn {
+  background-color: #eee;
+  border: none;
+  padding: 8px 10px;
+  font-size: 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.mic-btn:hover {
+  background-color: #ddd;
+}

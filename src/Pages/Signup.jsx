@@ -1,42 +1,129 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import './Signup.css'
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import './Signup.css';
 
 const Signup = () => {
+  const navigate = useNavigate();  // For redirection
   const [formData, setFormData] = useState({
-    fullName: '',
+    name: '',
     email: '',
     password: '',
     confirmPassword: '',
-    agreeTerms: false
-  })
-  
-  const [step, setStep] = useState(1)
-  
+    agreeTerms: false,
+    role: 'student' // default role
+  });
+
+  const [step, setStep] = useState(1);
+  const [errors, setErrors] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    agreeTerms: ''
+  });
+
+  // Handle change for input fields
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target
+    const { name, value, type, checked } = e.target;
     setFormData(prevState => ({
       ...prevState,
       [name]: type === 'checkbox' ? checked : value
-    }))
-  }
-  
+    }));
+  };
+
+  // Validate inputs for name, email, password, and confirm password
+  const validate = () => {
+    const newErrors = {};
+
+    // Name Validation: Minimum 2 characters, only alphabets and spaces
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.name)) {
+      newErrors.name = 'Name can only contain letters and spaces';
+    } else if (formData.name.length < 2) {
+      newErrors.name = 'Name must be at least 2 characters long';
+    }
+
+    // Email Validation: Must follow valid email format and not contain invalid characters
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    } else if (formData.email.length < 5) {
+      newErrors.email = 'Email must be at least 5 characters long';
+    }
+
+    // Password Validation: Must contain minimum 8 characters, 1 uppercase, 1 lowercase, 1 number, 1 special character
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    } else if (!/[A-Z]/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one uppercase letter';
+    } else if (!/[a-z]/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one lowercase letter';
+    } else if (!/[0-9]/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one number';
+    } else if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one special character';
+    }
+
+    // Confirm Password Validation: Should match the password
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    // Agree Terms Validation
+    if (!formData.agreeTerms) {
+      newErrors.agreeTerms = 'You must agree to the terms and conditions';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0; // Return true if there are no errors
+  };
+
+  // Handle next step of the form
   const nextStep = (e) => {
-    e.preventDefault()
-    setStep(2)
-  }
-  
+    e.preventDefault();
+    if (validate()) {
+      setStep(2);
+    }
+  };
+
+  // Handle previous step of the form
   const prevStep = () => {
-    setStep(1)
-  }
-  
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    console.log('Signup form submitted:', formData)
-    // Here you would typically handle user registration
-  }
-  
+    setStep(1);
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validate()) return; // Ensure validation passes before submitting
+
+    try {
+      const response = await fetch('http://localhost:3500/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.status === 200 || response.status === 201) {
+        localStorage.setItem('token', data.token); // Store token
+        alert('Signup successful!');
+        navigate('/login'); // Redirect to login page after signup
+      } else {
+        alert(data.errors[0].msg || 'Signup failed');
+      }
+    } catch (error) {
+      console.error("Error during signup:", error);
+      alert("Signup failed, please try again later.");
+    }
+  };
+
   return (
     <div className="signup-page page-container">
       <div className="container">
@@ -45,7 +132,7 @@ const Signup = () => {
             <div className="signup-container">
               <div className="row g-0">
                 <div className="col-md-6 order-md-2">
-                  <motion.div 
+                  <motion.div
                     className="signup-image"
                     initial={{ opacity: 0, x: 50 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -53,7 +140,7 @@ const Signup = () => {
                   >
                     <div className="overlay"></div>
                     <div className="signup-content">
-                      <motion.div 
+                      <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.3 }}
@@ -61,40 +148,12 @@ const Signup = () => {
                         <h2>Join QuickNotes AI</h2>
                         <p>Create your account and start organizing your ideas with the power of artificial intelligence.</p>
                       </motion.div>
-                      <motion.div 
-                        className="signup-benefits"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.5 }}
-                      >
-                        <h3>Why Choose QuickNotes AI?</h3>
-                        <div className="benefit-item">
-                          <i className="fas fa-brain"></i>
-                          <div>
-                            <h4>AI-Powered Organization</h4>
-                            <p>Our AI automatically organizes and connects your notes</p>
-                          </div>
-                        </div>
-                        <div className="benefit-item">
-                          <i className="fas fa-bolt"></i>
-                          <div>
-                            <h4>Quick Capture</h4>
-                            <p>Capture ideas instantly with text, voice, or images</p>
-                          </div>
-                        </div>
-                        <div className="benefit-item">
-                          <i className="fas fa-coins"></i>
-                          <div>
-                            <h4>E-Coin Rewards</h4>
-                            <p>Earn rewards for consistent usage and unlock premium features</p>
-                          </div>
-                        </div>
-                      </motion.div>
                     </div>
                   </motion.div>
                 </div>
+
                 <div className="col-md-6 order-md-1">
-                  <motion.div 
+                  <motion.div
                     className="signup-form-container"
                     initial={{ opacity: 0, x: -50 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -104,7 +163,7 @@ const Signup = () => {
                       <h3>Create Account</h3>
                       <p>Sign up for free and start using QuickNotes AI</p>
                     </div>
-                    
+
                     <div className="signup-steps">
                       <div className={`step-item ${step >= 1 ? 'active' : ''}`}>
                         <div className="step-number">1</div>
@@ -116,208 +175,115 @@ const Signup = () => {
                         <div className="step-label">Preferences</div>
                       </div>
                     </div>
-                    
+
                     {step === 1 ? (
                       <form className="signup-form" onSubmit={nextStep}>
                         <div className="form-group">
-                          <label htmlFor="fullName">Full Name</label>
-                          <div className="input-group">
-                            <span className="input-icon">
-                              <i className="fas fa-user"></i>
-                            </span>
-                            <input
-                              type="text"
-                              id="fullName"
-                              name="fullName"
-                              value={formData.fullName}
-                              onChange={handleChange}
-                              required
-                              placeholder="Enter your full name"
-                            />
-                          </div>
+                          <label htmlFor="name">Full Name</label>
+                          <input
+                            type="text"
+                            id="name"
+                            name="name"
+                            value={formData.name}
+                            onChange={handleChange}
+                            required
+                            placeholder="Enter your full name"
+                          />
+                          {errors.name && <p className="error-text">{errors.name}</p>}
                         </div>
-                        
+
                         <div className="form-group">
                           <label htmlFor="email">Email Address</label>
-                          <div className="input-group">
-                            <span className="input-icon">
-                              <i className="fas fa-envelope"></i>
-                            </span>
-                            <input
-                              type="email"
-                              id="email"
-                              name="email"
-                              value={formData.email}
-                              onChange={handleChange}
-                              required
-                              placeholder="Enter your email"
-                            />
-                          </div>
+                          <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            required
+                            placeholder="Enter your email"
+                          />
+                          {errors.email && <p className="error-text">{errors.email}</p>}
                         </div>
-                        
+
                         <div className="form-group">
                           <label htmlFor="password">Password</label>
-                          <div className="input-group">
-                            <span className="input-icon">
-                              <i className="fas fa-lock"></i>
-                            </span>
-                            <input
-                              type="password"
-                              id="password"
-                              name="password"
-                              value={formData.password}
-                              onChange={handleChange}
-                              required
-                              placeholder="Create a password"
-                            />
-                          </div>
-                          <div className="password-strength">
-                            <div className="strength-meter">
-                              <div className="strength-bar" style={{ width: formData.password.length > 8 ? '100%' : `${formData.password.length * 12.5}%` }}></div>
-                            </div>
-                            <span className="strength-text">
-                              {formData.password.length === 0 ? 'Password strength' : 
-                               formData.password.length < 6 ? 'Weak' : 
-                               formData.password.length < 8 ? 'Medium' : 'Strong'}
-                            </span>
-                          </div>
+                          <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
+                            required
+                            placeholder="Create a password"
+                          />
+                          {errors.password && <p className="error-text">{errors.password}</p>}
                         </div>
-                        
+
                         <div className="form-group">
                           <label htmlFor="confirmPassword">Confirm Password</label>
-                          <div className="input-group">
-                            <span className="input-icon">
-                              <i className="fas fa-lock"></i>
-                            </span>
-                            <input
-                              type="password"
-                              id="confirmPassword"
-                              name="confirmPassword"
-                              value={formData.confirmPassword}
-                              onChange={handleChange}
-                              required
-                              placeholder="Confirm your password"
-                            />
-                          </div>
-                          {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                            <div className="password-mismatch">Passwords do not match</div>
-                          )}
+                          <input
+                            type="password"
+                            id="confirmPassword"
+                            name="confirmPassword"
+                            value={formData.confirmPassword}
+                            onChange={handleChange}
+                            required
+                            placeholder="Confirm your password"
+                          />
+                          {errors.confirmPassword && <p className="error-text">{errors.confirmPassword}</p>}
                         </div>
-                        
-                        <motion.button 
-                          type="submit" 
-                          className="btn-primary-custom signup-btn"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          disabled={formData.password !== formData.confirmPassword && formData.confirmPassword !== ''}
-                        >
-                          Next Step <i className="fas fa-arrow-right"></i>
-                        </motion.button>
+
+                        <div className="form-group">
+                          <label htmlFor="role">Select Role</label>
+                          <select
+                            id="role"
+                            name="role"
+                            value={formData.role}
+                            onChange={handleChange}
+                            required
+                          >
+                            <option value="student">Student</option>
+                            <option value="teacher">Teacher</option>
+                          </select>
+                        </div>
+
+                        <div className="form-group checkbox-group">
+                          <input
+                            type="checkbox"
+                            id="agreeTerms"
+                            name="agreeTerms"
+                            checked={formData.agreeTerms}
+                            onChange={handleChange}
+                            required
+                          />
+                          <label htmlFor="agreeTerms">I agree to the terms and conditions</label>
+                          {errors.agreeTerms && <p className="error-text">{errors.agreeTerms}</p>}
+                        </div>
+
+                        <button type="submit" className="btn btn-primary">Next</button>
+                        <p className="already-account">Already have an account? <Link to="/login">Login</Link></p>
                       </form>
                     ) : (
                       <form className="signup-form" onSubmit={handleSubmit}>
-                        <div className="preferences-section">
-                          <h4>Select Your Interests</h4>
-                          <p>We'll customize your experience based on your interests</p>
-                          
-                          <div className="interests-grid">
-                            <div className="interest-item">
-                              <input type="checkbox" id="work" name="interests" value="work" />
-                              <label htmlFor="work">
-                                <i className="fas fa-briefcase"></i>
-                                <span>Work</span>
-                              </label>
-                            </div>
-                            <div className="interest-item">
-                              <input type="checkbox" id="study" name="interests" value="study" />
-                              <label htmlFor="study">
-                                <i className="fas fa-book"></i>
-                                <span>Study</span>
-                              </label>
-                            </div>
-                            <div className="interest-item">
-                              <input type="checkbox" id="personal" name="interests" value="personal" />
-                              <label htmlFor="personal">
-                                <i className="fas fa-user"></i>
-                                <span>Personal</span>
-                              </label>
-                            </div>
-                            <div className="interest-item">
-                              <input type="checkbox" id="creative" name="interests" value="creative" />
-                              <label htmlFor="creative">
-                                <i className="fas fa-paint-brush"></i>
-                                <span>Creative</span>
-                              </label>
-                            </div>
-                            <div className="interest-item">
-                              <input type="checkbox" id="research" name="interests" value="research" />
-                              <label htmlFor="research">
-                                <i className="fas fa-flask"></i>
-                                <span>Research</span>
-                              </label>
-                            </div>
-                            <div className="interest-item">
-                              <input type="checkbox" id="other" name="interests" value="other" />
-                              <label htmlFor="other">
-                                <i className="fas fa-ellipsis-h"></i>
-                                <span>Other</span>
-                              </label>
-                            </div>
-                          </div>
+                        <div className="form-group">
+                          <label>Welcome, {formData.name}!</label>
+                          <p>You’ve selected <strong>{formData.role}</strong> role. You can now complete your signup.</p>
                         </div>
-                        
-                        <div className="form-group terms-group">
-                          <div className="checkbox-group">
-                            <input
-                              type="checkbox"
-                              id="agreeTerms"
-                              name="agreeTerms"
-                              checked={formData.agreeTerms}
-                              onChange={handleChange}
-                              required
-                            />
-                            <label htmlFor="agreeTerms">
-                              I agree to the <Link to="#">Terms of Service</Link> and <Link to="#">Privacy Policy</Link>
-                            </label>
-                          </div>
-                        </div>
-                        
-                        <div className="form-buttons">
-                          <motion.button 
-                            type="button" 
-                            className="btn-secondary-custom back-btn"
-                            onClick={prevStep}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            <i className="fas fa-arrow-left"></i> Back
-                          </motion.button>
-                          
-                          <motion.button 
-                            type="submit" 
-                            className="btn-primary-custom signup-btn"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            disabled={!formData.agreeTerms}
-                          >
-                            Create Account <i className="fas fa-check"></i>
-                          </motion.button>
-                        </div>
+
+                        <button type="button" className="btn btn-secondary" onClick={prevStep}>Back</button>
+                        <button type="submit" className="btn btn-primary">Sign Up</button>
                       </form>
                     )}
-                    
-                    <div className="signup-footer">
-                      <p>Already have an account? <Link to="/login">Sign In</Link></p>
-                    </div>
                   </motion.div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </div>  
     </div>
-  )
+  );
 }
 
-export default Signup
+export default Signup;
